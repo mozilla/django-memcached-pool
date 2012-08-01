@@ -1,11 +1,25 @@
-import sys
 try:
-    import cPickle as pickle
+    import cPickle as pickle        # NOQA
 except ImportError:
-    import pickle
+    import pickle                   # NOQA
 
 from django.core.cache.backends.memcached import MemcachedCache
 from memcachepool.pool import ClientPool
+
+
+# XXX using python-memcached style pickling
+# but maybe we could use something else like
+# json
+#
+# at least this makes it compatible with
+# existing data
+def serialize(data):
+    return pickle.dumps(data)
+
+
+def unserialize(data):
+    return pickle.loads(data)
+
 
 # XXX not sure if keeping the base BaseMemcachedCache class has anymore value
 class UMemcacheCache(MemcachedCache):
@@ -27,6 +41,7 @@ class UMemcacheCache(MemcachedCache):
         return cli
 
     def add(self, key, value, timeout=0, version=None):
+        value = serialize(value)
         key = self.make_key(key, version=version)
 
         with self._pool.reserve() as conn:
@@ -39,13 +54,11 @@ class UMemcacheCache(MemcachedCache):
 
         if val is None:
             return default
-        return val[0]
+
+        return unserialize(val[0])
 
     def set(self, key, value, timeout=0, version=None):
-        if not isinstance(value, str):
-            raise ValueError('Only string supported - you should serialize '
-                             'your data')
-
+        value = serialize(value)
         key = self.make_key(key, version=version)
         with self._pool.reserve() as conn:
             conn.set(key, value, self._get_memcache_timeout(timeout))
@@ -61,11 +74,14 @@ class UMemcacheCache(MemcachedCache):
             ret = conn.get_multi(new_keys)
 
         if ret:
-            _ = {}
+            res = {}
             m = dict(zip(new_keys, keys))
+
             for k, v in ret.items():
-                _[m[k]] = v
-            ret = _
+                res[m[k]] = serialize(v)
+
+            return res
+
         return ret
 
     def close(self, **kwargs):
@@ -108,7 +124,7 @@ class UMemcacheCache(MemcachedCache):
         safe_data = {}
         for key, value in data.items():
             key = self.make_key(key, version=version)
-            safe_data[key] = value
+            safe_data[key] = serialize(value)
 
         with self._pool.reserve() as conn:
             conn.set_multi(safe_data, self._get_memcache_timeout(timeout))

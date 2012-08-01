@@ -12,3 +12,8 @@ class TestCache(TestCase):
         # simple calls
         cache.set('a', '1')
         self.assertEqual(cache.get('a'), '1')
+
+        # should support any type and deal with serialization
+        # like python-memcached does
+        cache.set('a', 1)
+        self.assertEqual(cache.get('a'), 1)
