@@ -69,6 +69,9 @@ class UMemcacheCache(MemcachedCache):
             conn.delete(key)
 
     def get_many(self, keys, version=None):
+        if keys == {}:
+            return {}
+
         new_keys = map(lambda x: self.make_key(x, version=version), keys)
         with self._pool.reserve() as conn:
             ret = conn.get_multi(new_keys)

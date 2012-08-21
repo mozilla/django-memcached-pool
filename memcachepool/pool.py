@@ -52,7 +52,7 @@ class ClientPool(object):
                     return ts, client
                 # Otherwise, the connection is stale.
                 # Close it, push an empty slot onto the queue, and retry.
-                client.disconnect_all()
+                client.disconnect()
                 self.clients.put(EMPTY_SLOT)
                 continue
 
