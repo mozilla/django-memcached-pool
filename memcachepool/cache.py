@@ -30,7 +30,8 @@ class UMemcacheCache(MemcachedCache):
                                          library=umemcache,
                                          value_not_found_exception=ValueError)
         # see how to pass the pool value
-        self._pool = ClientPool(self._get_client)
+        maxsize = params.get('MAX_POOL_SIZE', 35)
+        self._pool = ClientPool(self._get_client, maxsize=int(maxsize))
 
     def _get_client(self):
         if len(self._servers) != 1:
@@ -80,7 +81,7 @@ class UMemcacheCache(MemcachedCache):
                 res = conn.get(key)
                 if res is None:
                     continue
-                ret[key] = conn.get(key)[0]
+                ret[key] = res[0]
 
         if ret:
             res = {}
