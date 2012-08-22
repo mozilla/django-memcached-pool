@@ -73,15 +73,21 @@ class UMemcacheCache(MemcachedCache):
             return {}
 
         new_keys = map(lambda x: self.make_key(x, version=version), keys)
+
+        ret = {}
         with self._pool.reserve() as conn:
-            ret = conn.get_multi(new_keys)
+            for key in new_keys:
+                res = conn.get(key)
+                if res is None:
+                    continue
+                ret[key] = conn.get(key)[0]
 
         if ret:
             res = {}
             m = dict(zip(new_keys, keys))
 
             for k, v in ret.items():
-                res[m[k]] = serialize(v)
+                res[m[k]] = unserialize(v)
 
             return res
 
@@ -130,12 +136,13 @@ class UMemcacheCache(MemcachedCache):
             safe_data[key] = serialize(value)
 
         with self._pool.reserve() as conn:
-            conn.set_multi(safe_data, self._get_memcache_timeout(timeout))
+            for key, value in safe_data.items():
+                conn.set(key, value, self._get_memcache_timeout(timeout))
 
     def delete_many(self, keys, version=None):
-        l = lambda x: self.make_key(x, version=version)
         with self._pool.reserve() as conn:
-            conn.delete_multi(map(l, keys))
+            for key in keys:
+                conn.delete(self.make_key(key, version=version))
 
     def clear(self):
         with self._pool.reserve() as conn:
