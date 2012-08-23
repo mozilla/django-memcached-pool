@@ -5,6 +5,10 @@ except ImportError:
 
 from django.core.cache.backends.memcached import MemcachedCache
 from memcachepool.pool import ClientPool
+import socket
+import random
+import time
+import errno
 
 
 # XXX using python-memcached style pickling
@@ -30,16 +34,81 @@ class UMemcacheCache(MemcachedCache):
                                          library=umemcache,
                                          value_not_found_exception=ValueError)
         # see how to pass the pool value
-        maxsize = params.get('MAX_POOL_SIZE', 35)
-        self._pool = ClientPool(self._get_client, maxsize=int(maxsize))
+        self.maxsize = int(params.get('MAX_POOL_SIZE', 35))
+        self.blacklist_time = int(params.get('BLACKLIST_TIME', 60))
+        self.socktimeout = int(params.get('SOCKET_TIMEOUT', 4))
+        self._pool = ClientPool(self._get_client, maxsize=self.maxsize)
+        self._blacklist = {}
+
+    def _pick_server(self):
+        # update the blacklist
+        for server, age in self._blacklist.items():
+            if time.time() - age > self.blacklist_time:
+                del self._blacklist[server]
+
+        # pick a server in the list
+        choices = [server for server in self._servers
+                   if server not in self._blacklist]
+
+        if choices == []:
+            return None
+
+        return random.choice(choices)
+
+    def _blacklist_server(self, server):
+        # blacklist a server
+        self._blacklist[server] = time.time()
 
     def _get_client(self):
-        if len(self._servers) != 1:
-            raise ValueError('umemcached does not support several servers')
+        server = self._pick_server()
+        last_error = None
 
-        cli = self._lib.Client(self._servers[0])
-        cli.connect()
-        return cli
+        # until my merge makes it upstream
+        # see : https://github.com/esnme/ultramemcache/pull/9
+        #
+        # we are going to fallback on the poor's man technique
+        # to define the socket timeout.
+        #
+        # Unfortunately, this change impacts all sockets created
+        # in the interim in the same process, but that should
+        # not be a problem since we'll usually set this
+        # timeout to 5 seconds, which is long enough for any
+        # protocol
+        if hasattr(self._lib.Client, 'sock'):
+            def create_client(server):
+                cli = self._lib.Client(server)
+                cli.sock.settimeout(self.socktimeout)
+                return cli
+        else:
+            def create_client(client):
+                old = socket.getdefaulttimeout()
+                socket.setdefaulttimeout(self.socktimeout)
+                try:
+                    return self._lib.Client(server)
+                finally:
+                    socket.setdefaulttimeout(old)
+
+        while server is not None:
+            cli = create_client(server)
+            try:
+                cli.connect()
+                return cli
+            except (socket.timeout, socket.error), e:
+                if not isinstance(e, socket.timeout):
+                    if e.errno != errno.ECONNREFUSED:
+                        # unmanaged case yet
+                        raise
+
+                # well that's embarrassing, let's blacklist this one
+                # and try again
+                self._blacklist_server(server)
+                server = self._pick_server()
+                last_error = e
+
+        if last_error is not None:
+            raise last_error
+        else:
+            raise socket.timeout('No server left in the pool')
 
     def add(self, key, value, timeout=0, version=None):
         value = serialize(value)

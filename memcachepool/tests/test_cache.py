@@ -1,4 +1,6 @@
 from unittest import TestCase
+import socket
+import time
 
 
 class TestCache(TestCase):
@@ -35,3 +37,22 @@ class TestCache(TestCase):
 
         cache.delete_many(['a', 'b'])
         self.assertEqual(cache.get_many(['a', 'b']), {})
+
+    def test_loadbalance(self):
+        from memcachepool.cache import UMemcacheCache
+
+        # creating the cache class with two backends (one is off)
+        params = {'SOCKET_TIMEOUT': 1, 'BLACKLIST_TIME': 1}
+        cache = UMemcacheCache('127.0.0.1:11214;127.0.0.2:11213', params)
+
+        # the load balancer should blacklist all both IPs.
+        # and return an error
+        self.assertRaises(socket.error, cache.set, 'a', '1')
+        self.assertTrue(len(cache._blacklist), 2)
+
+        # wait for two seconds.
+        time.sleep(1.1)
+
+        # calling _pick_server should purge the blacklist
+        cache._pick_server()
+        self.assertEqual(len(cache._blacklist), 0)
