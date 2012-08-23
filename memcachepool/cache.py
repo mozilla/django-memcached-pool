@@ -74,13 +74,13 @@ class UMemcacheCache(MemcachedCache):
         # not be a problem since we'll usually set this
         # timeout to 5 seconds, which is long enough for any
         # protocol
-        if hasattr(self._lib.Client, 'sock'):
+        if hasattr(self._lib.Client, 'sock'):   # NOQA
             def create_client(server):
                 cli = self._lib.Client(server)
                 cli.sock.settimeout(self.socktimeout)
                 return cli
         else:
-            def create_client(client):
+            def create_client(client):          # NOQA
                 old = socket.getdefaulttimeout()
                 socket.setdefaulttimeout(self.socktimeout)
                 try:
