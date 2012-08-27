@@ -48,9 +48,8 @@ class UMemcacheCache(MemcachedCache):
             if time.time() - age > self.blacklist_time:
                 del self._blacklist[server]
 
-        # pick a server in the list
-        choices = [server for server in self._servers
-                   if server not in self._blacklist]
+        # build the list of available servers
+        choices = list(set(self._servers) ^ set(self._blacklist.keys()))
 
         if not choices:
             return None
