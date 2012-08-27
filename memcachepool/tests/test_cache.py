@@ -45,7 +45,7 @@ class TestCache(TestCase):
         params = {'SOCKET_TIMEOUT': 1, 'BLACKLIST_TIME': 1}
         cache = UMemcacheCache('127.0.0.1:11214;127.0.0.2:11213', params)
 
-        # the load balancer should blacklist all both IPs.
+        # the load balancer should blacklist both IPs.
         # and return an error
         self.assertRaises(socket.error, cache.set, 'a', '1')
         self.assertTrue(len(cache._blacklist), 2)
