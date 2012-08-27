@@ -58,7 +58,6 @@ class UMemcacheCache(MemcachedCache):
         return random.choice(choices)
 
     def _blacklist_server(self, server):
-        # blacklist a server
         self._blacklist[server] = time.time()
 
     def _get_client(self):
