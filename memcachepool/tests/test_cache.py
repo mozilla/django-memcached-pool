@@ -1,6 +1,6 @@
-from unittest import TestCase
 import socket
 import time
+from unittest import TestCase
 
 
 class TestCache(TestCase):

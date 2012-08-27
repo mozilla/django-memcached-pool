@@ -3,12 +3,14 @@ try:
 except ImportError:
     import pickle                   # NOQA
 
-from django.core.cache.backends.memcached import MemcachedCache
-from memcachepool.pool import ClientPool
-import socket
-import random
-import time
 import errno
+import random
+import socket
+import time
+
+from django.core.cache.backends.memcached import MemcachedCache
+
+from memcachepool.pool import ClientPool
 
 
 # XXX using python-memcached style pickling
