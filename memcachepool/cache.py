@@ -52,7 +52,7 @@ class UMemcacheCache(MemcachedCache):
         choices = [server for server in self._servers
                    if server not in self._blacklist]
 
-        if choices == []:
+        if not choices:
             return None
 
         return random.choice(choices)
