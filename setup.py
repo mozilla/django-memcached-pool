@@ -32,5 +32,4 @@ setup(name='django-memcached-pool',
       zip_safe=False,
       install_requires=requires,
       tests_require=test_requires,
-      test_suite="cornice")
-
+      test_suite="memcachepool.tests")
