@@ -1,3 +1,4 @@
+A Django Memcached backend with a pool of connectors.
 
-A Django Memcached backend with a pool
-
+You can configure your django application to use
+`memcachepool.cache.UMemcacheCache` as backend.
