@@ -15,7 +15,7 @@ test_requires = ['nose']
 
 
 setup(name='django-memcached-pool',
-      version='0.2',
+      version='0.1',
       description='A Memcached Pool for Django',
       long_description=README + '\n\n' + CHANGES,
       classifiers=[
@@ -23,6 +23,7 @@ setup(name='django-memcached-pool',
         "Framework :: Pylons",
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+        "License :: OSI Approved :: Apache Software License",
         ],
       author='Mozilla Services',
       author_email='services-dev@mozilla.org',
