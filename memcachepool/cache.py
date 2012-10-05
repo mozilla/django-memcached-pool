@@ -201,4 +201,4 @@ class UMemcacheCache(MemcachedCache):
 
     def clear(self):
         with self._pool.reserve() as conn:
-            conn._cache.flush_all()
+            conn.flush_all()
