@@ -19,6 +19,8 @@ new connections avoid picking it for a while.
 To use this backend, make sure the package is installed in your environment
 then use `memcachepool.cache.UMemcacheCache` as backend in your settings.
 
+**Also, make sure you use umemcache >= 1.5**
+
 Here's an example::
 
 
