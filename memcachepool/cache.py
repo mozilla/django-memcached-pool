@@ -47,6 +47,11 @@ class UMemcacheCache(MemcachedCache):
         self._pool = ClientPool(self._get_client, maxsize=self.maxsize)
         self._blacklist = {}
 
+    def _get_memcache_timeout(self, timeout):
+        if timeout == 0:
+            return timeout
+        return super(UMemcacheCache, self)._get_memcache_timeout(timeout)
+
     def _pick_server(self):
         # update the blacklist
         for server, age in self._blacklist.items():
