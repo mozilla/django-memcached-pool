@@ -1,5 +1,8 @@
-0.3
-####
+2012-10-05 - 0.3
+################
+
+- now based on umemcache 0.5
+- added support for MAX_ITEM_SIZE
 
 2012-09-07 - 0.2
 ################
