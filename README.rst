@@ -30,6 +30,7 @@ Here's an example::
                     'MAX_POOL_SIZE': 100,
                     'BLACKLIST_TIME': 20,
                     'SOCKET_TIMEOUT': 5,
+                    'MAX_ITEM_SIZE': 1000*100,
                 }
             }
         }
@@ -40,5 +41,5 @@ Options:
 - **MAX_POOL_SIZE:** -- The maximum number of connectors in the pool. default: 35.
 - **BLACKLIST_TIME** -- The time in seconds a server stays in the blacklist. default: 60
 - **SOCKET_TIMEOUT** -- the time in seconds for the socket timeout. default: 4
-
+- **MAX_ITEM_SIZE** -- The maximum size for an item in Memcache.
 

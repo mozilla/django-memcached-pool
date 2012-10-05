@@ -13,6 +13,9 @@ from django.core.cache.backends.memcached import MemcachedCache
 from memcachepool.pool import ClientPool
 
 
+DEFAULT_ITEM_SIZE = 1000 * 1000
+
+
 # XXX using python-memcached style pickling
 # but maybe we could use something else like
 # json
@@ -39,6 +42,8 @@ class UMemcacheCache(MemcachedCache):
         self.maxsize = int(params.get('MAX_POOL_SIZE', 35))
         self.blacklist_time = int(params.get('BLACKLIST_TIME', 60))
         self.socktimeout = int(params.get('SOCKET_TIMEOUT', 4))
+        self.max_item_size = long(params.get('MAX_ITEM_SIZE',
+                                             DEFAULT_ITEM_SIZE))
         self._pool = ClientPool(self._get_client, maxsize=self.maxsize)
         self._blacklist = {}
 
@@ -63,30 +68,10 @@ class UMemcacheCache(MemcachedCache):
         server = self._pick_server()
         last_error = None
 
-        # until my merge makes it upstream
-        # see : https://github.com/esnme/ultramemcache/pull/9
-        #
-        # we are going to fallback on the poor's man technique
-        # to define the socket timeout.
-        #
-        # Unfortunately, this change impacts all sockets created
-        # in the interim in the same process, but that should
-        # not be a problem since we'll usually set this
-        # timeout to 5 seconds, which is long enough for any
-        # protocol
-        if hasattr(self._lib.Client, 'sock'):   # NOQA
-            def create_client(server):
-                cli = self._lib.Client(server)
-                cli.sock.settimeout(self.socktimeout)
-                return cli
-        else:
-            def create_client(client):          # NOQA
-                old = socket.getdefaulttimeout()
-                socket.setdefaulttimeout(self.socktimeout)
-                try:
-                    return self._lib.Client(server)
-                finally:
-                    socket.setdefaulttimeout(old)
+        def create_client(server):
+            cli = self._lib.Client(server, max_item_size=self.max_item_size)
+            cli.sock.settimeout(self.socktimeout)
+            return cli
 
         while server is not None:
             cli = create_client(server)
