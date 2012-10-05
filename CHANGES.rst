@@ -1,5 +1,9 @@
-0.4
-.....
+2012-10-05 - 0.3.1
+##################
+
+- fixed cache.clear
+- make sure timeout=0 is treated as infinite
+
 
 2012-10-05 - 0.3
 ################
