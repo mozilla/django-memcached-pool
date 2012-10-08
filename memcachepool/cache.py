@@ -21,9 +21,9 @@ class UMemcacheCache(MemcachedCache):
     "An implementation of a cache binding using python-memcached"
 
     _FLAG_SERIALIZED = 1
-    _FLAG_INT = 1<<1
-    _FLAG_LONG = 1<<2
-    
+    _FLAG_INT = 1 << 1
+    _FLAG_LONG = 1 << 2
+
     def __init__(self, server, params):
         import umemcache
         super(MemcachedCache, self).__init__(server, params,

@@ -39,7 +39,7 @@ class TestCache(TestCase):
         self.assertEqual(cache.get_many(['a', 'b']), {})
 
     def test_incr_decr(self):
-        # make sure all the 'many' APIs work
+        # Testing incr and decr operations
         from memcachepool.cache import UMemcacheCache
 
         # creating the cache class
@@ -51,7 +51,7 @@ class TestCache(TestCase):
         self.assertEquals(cache.get('a'), 1)
 
     def test_types(self):
-        # make sure all the 'many' APIs work
+        # Testing if correct types are returned
         from memcachepool.cache import UMemcacheCache
 
         # creating the cache class
