@@ -38,6 +38,32 @@ class TestCache(TestCase):
         cache.delete_many(['a', 'b'])
         self.assertEqual(cache.get_many(['a', 'b']), {})
 
+    def test_incr_decr(self):
+        # Testing incr and decr operations
+        from memcachepool.cache import UMemcacheCache
+
+        # creating the cache class
+        cache = UMemcacheCache('127.0.0.1:11211', {})
+        cache.set('a', 1)
+        cache.incr('a', 1)
+        self.assertEquals(cache.get('a'), 2)
+        cache.decr('a', 1)
+        self.assertEquals(cache.get('a'), 1)
+
+    def test_types(self):
+        # Testing if correct types are returned
+        from memcachepool.cache import UMemcacheCache
+
+        # creating the cache class
+        cache = UMemcacheCache('127.0.0.1:11211', {})
+        cache.set('a', int(1))
+        self.assertEquals(cache.get('a'), 1)
+        self.assertTrue(isinstance(cache.get('a'), int))
+
+        cache.set('a', long(1))
+        self.assertEquals(cache.get('a'), 1)
+        self.assertTrue(isinstance(cache.get('a'), long))
+
     def test_loadbalance(self):
         from memcachepool.cache import UMemcacheCache
 
