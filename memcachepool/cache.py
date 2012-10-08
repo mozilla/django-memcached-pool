@@ -16,23 +16,14 @@ from memcachepool.pool import ClientPool
 DEFAULT_ITEM_SIZE = 1000 * 1000
 
 
-# XXX using python-memcached style pickling
-# but maybe we could use something else like
-# json
-#
-# at least this makes it compatible with
-# existing data
-def serialize(data):
-    return pickle.dumps(data)
-
-
-def unserialize(data):
-    return pickle.loads(data)
-
-
 # XXX not sure if keeping the base BaseMemcachedCache class has anymore value
 class UMemcacheCache(MemcachedCache):
     "An implementation of a cache binding using python-memcached"
+
+    _FLAG_SERIALIZED = 1
+    _FLAG_INT = 1<<1
+    _FLAG_LONG = 1<<2
+    
     def __init__(self, server, params):
         import umemcache
         super(MemcachedCache, self).__init__(server, params,
@@ -46,6 +37,18 @@ class UMemcacheCache(MemcachedCache):
                                              DEFAULT_ITEM_SIZE))
         self._pool = ClientPool(self._get_client, maxsize=self.maxsize)
         self._blacklist = {}
+
+    # XXX using python-memcached style pickling
+    # but maybe we could use something else like
+    # json
+    #
+    # at least this makes it compatible with
+    # existing data
+    def serialize(self, data):
+        return pickle.dumps(data)
+
+    def unserialize(self, data):
+        return pickle.loads(data)
 
     def _get_memcache_timeout(self, timeout):
         if timeout == 0:
@@ -100,12 +103,30 @@ class UMemcacheCache(MemcachedCache):
         else:
             raise socket.timeout('No server left in the pool')
 
+    def _flag_for_value(self, value):
+        if isinstance(value, int):
+            return self._FLAG_INT
+        elif isinstance(value, long):
+            return self._FLAG_LONG
+        return self._FLAG_SERIALIZED
+
+    def _value_for_flag(self, value, flag):
+        if flag == self._FLAG_INT:
+            return int(value)
+        elif flag == self._FLAG_LONG:
+            return long(value)
+        return self.unserialize(value)
+
     def add(self, key, value, timeout=0, version=None):
-        value = serialize(value)
+        flag = _flag_for_value(value)
+        if flag == self._FLAG_SERIALIED:
+            value = self.serialize(value)
+        else:
+            value = '%d' % value
         key = self.make_key(key, version=version)
 
         with self._pool.reserve() as conn:
-            return conn.add(key, value, self._get_memcache_timeout(timeout))
+            return conn.add(key, value, self._get_memcache_timeout(timeout), flag)
 
     def get(self, key, default=None, version=None):
         key = self.make_key(key, version=version)
@@ -115,13 +136,17 @@ class UMemcacheCache(MemcachedCache):
         if val is None:
             return default
 
-        return unserialize(val[0])
+        return self._value_for_flag(value=val[0], flag=val[1])
 
     def set(self, key, value, timeout=0, version=None):
-        value = serialize(value)
+        flag = self._flag_for_value(value)
+        if flag == self._FLAG_SERIALIZED:
+            value = self.serialize(value)
+        else:
+            value = '%d' % value
         key = self.make_key(key, version=version)
         with self._pool.reserve() as conn:
-            conn.set(key, value, self._get_memcache_timeout(timeout))
+            conn.set(key, value, self._get_memcache_timeout(timeout), flag)
 
     def delete(self, key, version=None):
         key = self.make_key(key, version=version)
@@ -140,14 +165,14 @@ class UMemcacheCache(MemcachedCache):
                 res = conn.get(key)
                 if res is None:
                     continue
-                ret[key] = res[0]
+                ret[key] = res
 
         if ret:
             res = {}
             m = dict(zip(new_keys, keys))
 
             for k, v in ret.items():
-                res[m[k]] = unserialize(v)
+                res[m[k]] = self._value_for_flag(value=v[0], flag=v[1])
 
             return res
 
@@ -193,11 +218,16 @@ class UMemcacheCache(MemcachedCache):
         safe_data = {}
         for key, value in data.items():
             key = self.make_key(key, version=version)
-            safe_data[key] = serialize(value)
+            flag = self._flag_for_value(value)
+            if flag == self._FLAG_SERIALIZED:
+                value = self.serialize(value)
+            else:
+                value = '%d' % value
+            safe_data[key] = value
 
         with self._pool.reserve() as conn:
             for key, value in safe_data.items():
-                conn.set(key, value, self._get_memcache_timeout(timeout))
+                conn.set(key, value, self._get_memcache_timeout(timeout), flag)
 
     def delete_many(self, keys, version=None):
         with self._pool.reserve() as conn:
