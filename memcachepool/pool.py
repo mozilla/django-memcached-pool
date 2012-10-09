@@ -46,7 +46,13 @@ class ClientPool(object):
                 now = int(time.time())
                 # If we got an empty slot placeholder, create a new connection.
                 if client is None:
-                    return now, self.factory()
+                    try:
+                        return now, self.factory()
+                    except Exception,e:
+                        if self.maxsize is not None:
+                            #return slot to queue
+                            self.clients.put(EMPTY_SLOT)
+                        raise e
                 # If the connection is not stale, go ahead and use it.
                 if ts + self.timeout > now:
                     return ts, client
