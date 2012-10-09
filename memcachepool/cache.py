@@ -35,7 +35,7 @@ class UMemcacheCache(MemcachedCache):
         self.socktimeout = int(params.get('SOCKET_TIMEOUT', 4))
         self.max_item_size = long(params.get('MAX_ITEM_SIZE',
                                              DEFAULT_ITEM_SIZE))
-        self._pool = ClientPool(self._get_client, maxsize=self.maxsize)
+        self._pool = ClientPool(self._get_client, maxsize=self.maxsize,wait_for_connection=self.socktimeout)
         self._blacklist = {}
 
     # XXX using python-memcached style pickling

@@ -11,11 +11,12 @@ EMPTY_SLOT = (sys.maxint, None)
 
 class ClientPool(object):
 
-    def __init__(self, factory, maxsize=None, timeout=60):
+    def __init__(self, factory, maxsize=None, timeout=60,wait_for_connection=None):
         self.factory = factory
         self.maxsize = maxsize
         self.timeout = timeout
         self.clients = Queue.PriorityQueue(maxsize)
+        self.wait_for_connection=wait_for_connection
         # If there is a maxsize, prime the queue with empty slots.
         if maxsize is not None:
             for _ in xrange(maxsize):
@@ -36,12 +37,16 @@ class ClientPool(object):
         # Loop until we get a non-stale connection, or we create a new one.
         while True:
             try:
-                ts, client = self.clients.get(blocking)
+                ts, client = self.clients.get(blocking,self.wait_for_connection)
             except Queue.Empty:
-                # No maxsize and no free connections, create a new one.
-                # XXX TODO: we should be using a monotonic clock here.
-                now = int(time.time())
-                return now, self.factory()
+                if blocking:
+                    #timeout
+                    raise Exception("No connections available in the pool")
+                else:
+                    # No maxsize and no free connections, create a new one.
+                    # XXX TODO: we should be using a monotonic clock here.
+                    now = int(time.time())
+                    return now, self.factory()
             else:
                 now = int(time.time())
                 # If we got an empty slot placeholder, create a new connection.
