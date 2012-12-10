@@ -11,6 +11,7 @@ _RETRY = ('set', 'get', 'gets', 'get_multi', 'gets_multi',
           'add', 'replace', 'append', 'prepend', 'delete',
           'cas', 'incr', 'decr', 'stats', 'flush_all',
           'version')
+_ERRORS = (IOError, RuntimeError, MemcachedError, socket.error)
 
 
 class Client(object):
@@ -75,7 +76,7 @@ class Client(object):
             while retries < self.max_connect_retries:
                 try:
                     return current_func(*args, **kw)
-                except (IOError, RuntimeError, MemcachedError), exc:
+                except _ERRORS, exc:
                     self._create_client()
                     current_func = getattr(self._client, func.__name__)
                     time.sleep(delay)
