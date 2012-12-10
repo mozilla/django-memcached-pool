@@ -37,6 +37,18 @@ class UMemcacheCache(MemcachedCache):
         self._pool = ClientPool(self._get_client, maxsize=self.maxsize,
                                 wait_for_connection=self.socktimeout)
         self._blacklist = {}
+        self.retries = int(params.get('MAX_RETRIES', 3))
+
+    def call(self, func, *args, **kwargs):
+        retries = 0
+        while retries < self.retries:
+            with self._pool.reserve() as conn:
+                try:
+                    return getattr(conn, func)(*args, **kwargs)
+                except Exception, exc:
+                    # log
+                    retries += 1
+        raise exc
 
     # XXX using python-memcached style pickling
     # but maybe we could use something else like
@@ -119,20 +131,19 @@ class UMemcacheCache(MemcachedCache):
 
     def add(self, key, value, timeout=0, version=None):
         flag = self._flag_for_value(value)
-        if flag == self._FLAG_SERIALIED:
+        if flag == self._FLAG_SERIALIZED:
             value = self.serialize(value)
         else:
             value = '%d' % value
+
         key = self.make_key(key, version=version)
 
-        with self._pool.reserve() as conn:
-            return conn.add(key, value, self._get_memcache_timeout(timeout),
-                            flag)
+        return self.call('add', value, self._get_memcache_timeout(timeout),
+                         flag)
 
     def get(self, key, default=None, version=None):
         key = self.make_key(key, version=version)
-        with self._pool.reserve() as conn:
-            val = conn.get(key)
+        val = self.call('get', key)
 
         if val is None:
             return default
@@ -146,13 +157,11 @@ class UMemcacheCache(MemcachedCache):
         else:
             value = '%d' % value
         key = self.make_key(key, version=version)
-        with self._pool.reserve() as conn:
-            conn.set(key, value, self._get_memcache_timeout(timeout), flag)
+        self.call('set', key, value, self._get_memcache_timeout(timeout), flag)
 
     def delete(self, key, version=None):
         key = self.make_key(key, version=version)
-        with self._pool.reserve() as conn:
-            conn.delete(key)
+        self.call('delete', key)
 
     def get_many(self, keys, version=None):
         if keys == {}:
@@ -161,12 +170,12 @@ class UMemcacheCache(MemcachedCache):
         new_keys = map(lambda x: self.make_key(x, version=version), keys)
 
         ret = {}
-        with self._pool.reserve() as conn:
-            for key in new_keys:
-                res = conn.get(key)
-                if res is None:
-                    continue
-                ret[key] = res
+
+        for key in new_keys:
+            res = self.call('get', key)
+            if res is None:
+                continue
+            ret[key] = res
 
         if ret:
             res = {}
@@ -186,8 +195,7 @@ class UMemcacheCache(MemcachedCache):
     def incr(self, key, delta=1, version=None):
         key = self.make_key(key, version=version)
         try:
-            with self._pool.reserve() as conn:
-                val = conn.incr(key, delta)
+            val = self.call('incr', key, delta)
 
         # python-memcache responds to incr on non-existent keys by
         # raising a ValueError, pylibmc by raising a pylibmc.NotFound
@@ -202,8 +210,7 @@ class UMemcacheCache(MemcachedCache):
     def decr(self, key, delta=1, version=None):
         key = self.make_key(key, version=version)
         try:
-            with self._pool.reserve() as conn:
-                val = conn.decr(key, delta)
+            val = self.call('decr', key, delta)
 
         # python-memcache responds to incr on non-existent keys by
         # raising a ValueError, pylibmc by raising a pylibmc.NotFound
@@ -226,15 +233,13 @@ class UMemcacheCache(MemcachedCache):
                 value = '%d' % value
             safe_data[key] = value
 
-        with self._pool.reserve() as conn:
-            for key, value in safe_data.items():
-                conn.set(key, value, self._get_memcache_timeout(timeout), flag)
+        for key, value in safe_data.items():
+            self.call('set', key, value, self._get_memcache_timeout(timeout),
+                      flag)
 
     def delete_many(self, keys, version=None):
-        with self._pool.reserve() as conn:
-            for key in keys:
-                conn.delete(self.make_key(key, version=version))
+        for key in keys:
+            self.call('delete', self.make_key(key, version=version))
 
     def clear(self):
-        with self._pool.reserve() as conn:
-            conn.flush_all()
+        self.call('flush_all')
