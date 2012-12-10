@@ -4,7 +4,6 @@ except ImportError:
     import pickle                   # NOQA
 
 import errno
-import random
 import socket
 import time
 
@@ -38,6 +37,7 @@ class UMemcacheCache(MemcachedCache):
                                 wait_for_connection=self.socktimeout)
         self._blacklist = {}
         self.retries = int(params.get('MAX_RETRIES', 3))
+        self._pick_index = 0
 
     def call(self, func, *args, **kwargs):
         retries = 0
@@ -79,7 +79,12 @@ class UMemcacheCache(MemcachedCache):
         if not choices:
             return None
 
-        return random.choice(choices)
+        if self._pick_index >= len(choices):
+            self._pick_index = 0
+
+        choice = choices[self._pick_index]
+        self._pick_index += 1
+        return choice
 
     def _blacklist_server(self, server):
         self._blacklist[server] = time.time()
