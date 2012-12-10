@@ -26,16 +26,17 @@ class UMemcacheCache(MemcachedCache):
 
     def __init__(self, server, params):
         import umemcache
-        super(MemcachedCache, self).__init__(server, params,
-                                         library=umemcache,
-                                         value_not_found_exception=ValueError)
+        kls = super(MemcachedCache, self)
+        kls.__init__(server, params, library=umemcache,
+                     value_not_found_exception=ValueError)
         # see how to pass the pool value
         self.maxsize = int(params.get('MAX_POOL_SIZE', 35))
         self.blacklist_time = int(params.get('BLACKLIST_TIME', 60))
         self.socktimeout = int(params.get('SOCKET_TIMEOUT', 4))
         self.max_item_size = long(params.get('MAX_ITEM_SIZE',
                                              DEFAULT_ITEM_SIZE))
-        self._pool = ClientPool(self._get_client, maxsize=self.maxsize,wait_for_connection=self.socktimeout)
+        self._pool = ClientPool(self._get_client, maxsize=self.maxsize,
+                                wait_for_connection=self.socktimeout)
         self._blacklist = {}
 
     # XXX using python-memcached style pickling
@@ -118,7 +119,7 @@ class UMemcacheCache(MemcachedCache):
         return self.unserialize(value)
 
     def add(self, key, value, timeout=0, version=None):
-        flag = _flag_for_value(value)
+        flag = self._flag_for_value(value)
         if flag == self._FLAG_SERIALIED:
             value = self.serialize(value)
         else:
@@ -126,7 +127,8 @@ class UMemcacheCache(MemcachedCache):
         key = self.make_key(key, version=version)
 
         with self._pool.reserve() as conn:
-            return conn.add(key, value, self._get_memcache_timeout(timeout), flag)
+            return conn.add(key, value, self._get_memcache_timeout(timeout),
+                            flag)
 
     def get(self, key, default=None, version=None):
         key = self.make_key(key, version=version)
