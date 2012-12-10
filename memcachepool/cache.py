@@ -9,7 +9,6 @@ import socket
 import time
 
 from django.core.cache.backends.memcached import MemcachedCache
-
 from memcachepool.pool import ClientPool
 
 
@@ -25,9 +24,9 @@ class UMemcacheCache(MemcachedCache):
     _FLAG_LONG = 1 << 2
 
     def __init__(self, server, params):
-        import umemcache
+        from memcachepool import client
         kls = super(MemcachedCache, self)
-        kls.__init__(server, params, library=umemcache,
+        kls.__init__(server, params, library=client,
                      value_not_found_exception=ValueError)
         # see how to pass the pool value
         self.maxsize = int(params.get('MAX_POOL_SIZE', 35))
