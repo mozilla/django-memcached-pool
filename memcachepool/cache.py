@@ -143,8 +143,8 @@ class UMemcacheCache(MemcachedCache):
 
         key = self.make_key(key, version=version)
 
-        return self.call('add', value, self._get_memcache_timeout(timeout),
-                         flag)
+        return self.call('add', key, value,
+                         self._get_memcache_timeout(timeout), flag)
 
     def get(self, key, default=None, version=None):
         key = self.make_key(key, version=version)
