@@ -4,14 +4,20 @@ from errno import EISCONN, EINVAL
 from functools import wraps
 
 from umemcache import Client as OriginalClient
-from umemcache import MemcachedError
 
 
 _RETRY = ('set', 'get', 'gets', 'get_multi', 'gets_multi',
           'add', 'replace', 'append', 'prepend', 'delete',
           'cas', 'incr', 'decr', 'stats', 'flush_all',
           'version')
-_ERRORS = (IOError, RuntimeError, MemcachedError, socket.error)
+
+try:
+    from umemcache import MemcachedError
+    _ERRORS = (IOError, RuntimeError, MemcachedError, socket.error)
+except ImportError:
+    MemcachedError = None
+    _ERRORS = (IOError, RuntimeError, socket.error)
+
 
 
 class Client(object):
