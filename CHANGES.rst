@@ -1,5 +1,11 @@
-0.4
-.....
+2012-12-11 - 0.4
+################
+
+- added inc/decr support
+- tweaked the timeout waits
+- added and using ReconnectClient to survive servers restarts
+- added a retry loop
+
 
 2012-10-05 - 0.3.1
 ##################
