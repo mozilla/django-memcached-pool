@@ -57,7 +57,7 @@ class UMemcacheCache(MemcachedCache):
     # at least this makes it compatible with
     # existing data
     def serialize(self, data):
-        return pickle.dumps(data)
+        return pickle.dumps(data, pickle.HIGHEST_PROTOCOL)
 
     def unserialize(self, data):
         return pickle.loads(data)
